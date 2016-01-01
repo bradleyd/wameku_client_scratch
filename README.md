@@ -1,6 +1,7 @@
 # WamekuClientScratch
 
-**TODO: Add description**
+This is an attempt to write a system monitoring solution in Elixir.
+
 
 ## Installation
 
