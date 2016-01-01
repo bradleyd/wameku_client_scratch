@@ -30,15 +30,13 @@ defmodule WamekuClientScratch.Scheduler do
 
   def handle_cast({:check, check_path}, state) do
     {output, return_code} = System.cmd("sh", [check_path])
-    IO.puts output
-    IO.puts return_code 
     # push results to queue
     # GenSerever.cast(WamekuClientScratch.Producer, {:pub, {output, return_code}})
     {:noreply, state}
   end
 
   def handle_cast({:poll}, state) do
-    spawn(__MODULE__, :loop, [state])
+    spawn_link(__MODULE__, :loop, [state])
     {:noreply, state}
   end
 
@@ -48,7 +46,7 @@ defmodule WamekuClientScratch.Scheduler do
     files
     |> Enum.into([], fn(x) -> Poison.decode!(File.read!("/tmp/checks/config/" <> x)) end)
     |> Enum.each(fn(check) -> time_to_check?(Map.get(check, "check")) end)
-    :timer.sleep(20000)
+    :timer.sleep(1000)
     loop(state)
   end
 
@@ -61,13 +59,13 @@ defmodule WamekuClientScratch.Scheduler do
         now = :os.system_time(:seconds)
         last_checked_time = check_metadata.last_checked
         difference = now - last_checked_time
-        IO.puts("now #{now} -- last_checked: #{last_checked_time} -- difference: #{difference} -- interval: #{check_interval}")
-        if difference >= check_interval do
+        Logger.debug("now #{now} -- last_checked: #{last_checked_time} -- difference: #{difference} -- interval: #{check_interval}")
+        if difference == check_interval do
           Logger.debug("time to run #{name}")
           GenServer.cast(WamekuClientScratch.CheckRunner, {:check, check})
         end
       :error ->
-        IO.puts "no check found, must be first check"
+        Logger.info "no check found in cache, must be first check"
         GenServer.cast(WamekuClientScratch.CheckRunner, {:check, check})
     end
   end

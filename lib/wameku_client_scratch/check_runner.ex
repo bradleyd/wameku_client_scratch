@@ -36,8 +36,7 @@ defmodule WamekuClientScratch.CheckRunner do
     check     = Map.get(check_path, "path")
     name      = Map.get(check_path, "name")
     {output, return_code} = System.cmd("sh", [check] ++ arguments)
-    Logger.info(String.rstrip(output))
-    Logger.info return_code 
+    Logger.info("output: #{String.rstrip(output)} -- return code: #{return_code}")
     WamekuClientScratch.Cache.insert(:cache, {name, %CheckMetadata{last_checked: :os.system_time(:seconds), exit_code: return_code}})
     # push results to queue
     # GenSerever.cast(WamekuClientScratch.Producer, {:pub, {output, return_code}})
