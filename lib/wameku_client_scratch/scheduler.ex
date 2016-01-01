@@ -50,6 +50,8 @@ defmodule WamekuClientScratch.Scheduler do
 
   def start_supervisor(workers) do
     #WamekuClientScratch.GenericChecksSupervisor.start_worker(workers)
-    WamekuClientScratch.GenericChecksSupervisor.start_link(workers, [name: WamekuClientScratch.GenericChecksSupervisor])
+    {:ok, pid} = WamekuClientScratch.GenericChecksSupervisor.start_link(workers, [name: WamekuClientScratch.GenericChecksSupervisor])
+    IO.inspect pid
+    IO.inspect Process.monitor(pid)
   end
 end

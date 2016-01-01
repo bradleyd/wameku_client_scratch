@@ -23,7 +23,7 @@ defmodule WamekuClientScratch.GenericCheck do
   end
 
   def handle_cast({:poll}, state) do
-    spawn(__MODULE__, :loop, [state])
+    spawn_link(__MODULE__, :loop, [state])
     {:noreply, state}
   end
 
@@ -32,7 +32,8 @@ defmodule WamekuClientScratch.GenericCheck do
     {:stop, :normal, :ok, state}
   end
 
-def handle_info({:DOWN, ref, :process, _pid, _reason}, state) do
+  def handle_info({:DOWN, ref, :process, _pid, _reason}, state) do
+    Logger.error("We went down")
     {:noreply, state}
   end
   def handle_info(msg, state) do
