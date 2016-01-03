@@ -59,7 +59,7 @@ defmodule WamekuClientScratch.Scheduler do
         now = :os.system_time(:seconds)
         last_checked_time = check_metadata.last_checked
         difference = now - last_checked_time
-        Logger.debug("now #{now} -- last_checked: #{last_checked_time} -- difference: #{difference} -- interval: #{check_interval}")
+        Logger.debug("name: #{name} -- now #{now} -- last_checked: #{last_checked_time} -- difference: #{difference} -- interval: #{check_interval}")
         if difference == check_interval do
           Logger.debug("time to run #{name}")
           GenServer.cast(WamekuClientScratch.CheckRunner, {:check, check})

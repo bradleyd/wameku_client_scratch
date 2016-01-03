@@ -9,7 +9,7 @@ defmodule WamekuClientScratch.CheckRunner do
   end
 
   defmodule CheckMetadata do
-    defstruct last_checked: :nil, exit_code: :nil
+    defstruct last_checked: :nil, exit_code: :nil, history: [], host: :nil
   end
 
   def start_link(opts \\ []) do
@@ -35,11 +35,26 @@ defmodule WamekuClientScratch.CheckRunner do
     arguments = Map.get(check_path, "arguments")
     check     = Map.get(check_path, "path")
     name      = Map.get(check_path, "name")
-    {output, return_code} = System.cmd("sh", [check] ++ arguments)
-    Logger.info("output: #{String.rstrip(output)} -- return code: #{return_code}")
-    WamekuClientScratch.Cache.insert(:cache, {name, %CheckMetadata{last_checked: :os.system_time(:seconds), exit_code: return_code}})
+    #{output, return_code} = System.cmd("sh", [check] ++ arguments)
+    check_results = Porcelain.exec(check, arguments)
+    Logger.info("name: #{name} -- output: #{String.rstrip(check_results.out)} -- return code: #{check_results.status}")
+    ## first find the check..then increment the history of the check
+    check_metadata = find_or_create_by_name(name)
+    new_history = Enum.reverse(check_metadata.history ++ [check_results.status]) |> Enum.take(20)
+    new_check_metadata = %CheckMetadata{last_checked: :os.system_time(:seconds), exit_code: check_results.status, history: new_history }
+    Logger.info(inspect(new_check_metadata))
+    WamekuClientScratch.Cache.insert(:cache, {name, new_check_metadata})
     # push results to queue
-    # GenSerever.cast(WamekuClientScratch.Producer, {:pub, {output, return_code}})
+    # GenSerever.cast(WamekuClientScratch.Producer, {:pub, {name, output, return_code}})
     {:noreply, state}
+  end
+
+  defp find_or_create_by_name(name) do
+    case WamekuClientScratch.Cache.lookup(:cache, name) do
+      {:ok, {name, check_metadata}} ->
+        check_metadata
+      :error ->
+        %CheckMetadata{}
+    end
   end
 end
