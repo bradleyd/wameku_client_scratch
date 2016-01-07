@@ -10,6 +10,7 @@ defmodule WamekuClientScratch do
       # Define workers and child supervisors to be supervised
       #worker(WamekuClientScratch.CheckState, [[]]),
       worker(WamekuClientScratch.Cache, [:cache]),
+      worker(WamekuClientScratch.QueueProducer, []),
       worker(WamekuClientScratch.Scheduler, []),
       worker(WamekuClientScratch.CheckRunner, [])
     ]

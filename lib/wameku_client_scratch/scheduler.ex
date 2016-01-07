@@ -28,13 +28,6 @@ defmodule WamekuClientScratch.Scheduler do
     {:ok, []}
   end
 
-  def handle_cast({:check, check_path}, state) do
-    {output, return_code} = System.cmd("sh", [check_path])
-    # push results to queue
-    # GenSerever.cast(WamekuClientScratch.Producer, {:pub, {output, return_code}})
-    {:noreply, state}
-  end
-
   def handle_cast({:poll}, state) do
     spawn_link(__MODULE__, :loop, [state])
     {:noreply, state}
@@ -42,9 +35,8 @@ defmodule WamekuClientScratch.Scheduler do
 
   def loop(state) do
     #|> Enum.each(fn(check) -> GenServer.cast(WamekuClientScratch.CheckRunner, {:check, Map.get(check, "check")}) end)
-    {:ok, files} = File.ls("/tmp/checks/config") 
-    files
-    |> Enum.into([], fn(x) -> Poison.decode!(File.read!("/tmp/checks/config/" <> x)) end)
+    Path.wildcard("/tmp/checks/config/*.json")
+    |> Enum.into([], fn(x) -> Poison.decode!(File.read!(x)) end)
     |> Enum.each(fn(check) -> time_to_check?(Map.get(check, "check")) end)
     :timer.sleep(1000)
     loop(state)
@@ -66,9 +58,7 @@ defmodule WamekuClientScratch.Scheduler do
         end
       :error ->
         Logger.info "no check found in cache, must be first check"
-        GenServer.cast(WamekuClientScratch.CheckRunner, {:check, check})
+        GenServer.cast(WamekuClientScratch.CheckRunner, {:first_check, check})
     end
   end
-
-
 end
