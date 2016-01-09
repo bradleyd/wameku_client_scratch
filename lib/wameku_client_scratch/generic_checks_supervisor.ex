@@ -1,30 +1,18 @@
 defmodule WamekuClientScratch.GenericChecksSupervisor do
-  use Supervisor
+  import Supervisor.Spec, warn: false
   require Logger
 
-  def start_link(opts \\ []) do
-    Supervisor.start_link(__MODULE__, opts) 
+  def start_link(args \\ []) do
+    children = [ worker(WamekuClientScratch.Worker, [])]
+    opts = [
+      strategy: :simple_one_for_one, name: WamekuClientScratch.GenericChecksSupervisor.Supervisor
+    ]
+    Supervisor.start_link(children, opts)
   end
-  #  def start_link(workers, opts \\ []) do
-  #    Supervisor.start_link(__MODULE__, workers, opts) 
-  #  end
 
-  def init([]) do
-    #{:ok, files} = File.ls("/tmp/checks/config") 
-    files  = Path.wildcard("/tmp/checks/config/*.json")
-    checks = Enum.into(files, [], fn(x) -> Poison.decode!(File.read!(x)) end)
-    children = 
-    Enum.map(checks, fn(check) -> 
-    Logger.debug("got check #{inspect(check)}")
-    temp = Map.get(check, "check")
-    name = Map.get(temp, "name")
-    #WamekuClientScratch.GenericChecksSupervisor.start_worker(Map.get(check, "check"))
-    #spawn_link(__MODULE__, :start_supervisor, [Map.get(check, "check")])
-    worker(WamekuClientScratch.GenericCheck, [Map.get(check, "check")], id: name)
-    end)
-    #spawn_link(__MODULE__, :start_supervisor, [children])
-
-    IO.puts "starting checks workers"
-    supervise(children, strategy: :one_for_one)
+  def start_child(check) do
+    Logger.debug("Starting child worker for #{inspect(check)}")
+    Supervisor.start_child(WamekuClientScratch.GenericChecksSupervisor.Supervisor, [check])
   end
+
 end

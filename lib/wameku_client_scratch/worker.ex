@@ -1,42 +1,13 @@
-defmodule WamekuClientScratch.GenericCheck do
-  use GenServer  
+defmodule WamekuClientScratch.Worker do
   require Logger
-
-  defmodule State do
-    defstruct interval: :nil
-  end
 
   defmodule CheckMetadata do
     defstruct last_checked: :nil, exit_code: :nil, history: [], host: :nil, output: :nil, name: :nil, notifier: :nil
   end
 
   def start_link(check) do
-    Logger.info("inside start link #{inspect(check)}")
-    GenServer.start_link(__MODULE__, check)
-  end
-
-  def init(check) do
-    GenServer.cast(self(), {:poll})
-    {:ok, check}
-  end
-
-  def handle_cast({:poll}, state) do
-    spawn_link(__MODULE__, :loop, [state])
-    {:noreply, state}
-  end
-
-  def handle_call(:stop, _from, state) do
-    Logger.info "got stop signal"
-    {:stop, :normal, :ok, state}
-  end
-
-  def handle_info({:DOWN, ref, :process, _pid, _reason}, state) do
-    Logger.error("We went down")
-    {:noreply, state}
-  end
-  def handle_info(msg, state) do
-    Logger.debug("Got #{msg}") 
-    {:noreply, state}
+    pid = spawn_link(__MODULE__, :loop, [check])
+    {:ok, pid}
   end
 
   def loop(state) do
@@ -63,7 +34,6 @@ defmodule WamekuClientScratch.GenericCheck do
     new_check_metadata = %CheckMetadata{last_checked: :os.system_time(:seconds), exit_code: check_results.status, history: new_history, output: check_results.out, name: name, host: to_string(hostname), notifier: notifier}
     WamekuClientScratch.Cache.insert(:cache, {name, new_check_metadata})
     # push results to queue
-    # GenSerever.cast(WamekuClientScratch.Producer, {:pub, {output, return_code}})
     GenServer.cast(WamekuClientScratch.QueueProducer, {:publish, new_check_metadata})
   end
 
@@ -75,4 +45,5 @@ defmodule WamekuClientScratch.GenericCheck do
         %CheckMetadata{}
     end
   end
+
 end
