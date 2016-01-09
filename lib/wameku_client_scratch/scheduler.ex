@@ -34,7 +34,7 @@ defmodule WamekuClientScratch.Scheduler do
 
   def loop(state) do
     import Supervisor.Spec, warn: false
-    {:ok, files} = File.ls("/tmp/checks/config") 
+    files = Path.wildcard("/tmp/checks/config/*.json")
     checks = Enum.into(files, [], fn(x) -> Poison.decode!(File.read!("/tmp/checks/config/" <> x)) end)
     children = 
     Enum.map(checks, fn(check) -> 

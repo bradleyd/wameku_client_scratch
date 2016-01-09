@@ -10,8 +10,9 @@ defmodule WamekuClientScratch.GenericChecksSupervisor do
   #  end
 
   def init([]) do
-    {:ok, files} = File.ls("/tmp/checks/config") 
-    checks = Enum.into(files, [], fn(x) -> Poison.decode!(File.read!("/tmp/checks/config/" <> x)) end)
+    #{:ok, files} = File.ls("/tmp/checks/config") 
+    files  = Path.wildcard("/tmp/checks/config/*.json")
+    checks = Enum.into(files, [], fn(x) -> Poison.decode!(File.read!(x)) end)
     children = 
     Enum.map(checks, fn(check) -> 
     Logger.debug("got check #{inspect(check)}")

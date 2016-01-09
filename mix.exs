@@ -14,7 +14,7 @@ defmodule WamekuClientScratch.Mixfile do
   #
   # Type "mix help compile.app" for more information
   def application do
-    [applications: [:logger, :poison],
+    [applications: [:logger, :porcelain, :poison],
       mod: {WamekuClientScratch, []}]
   end
 
@@ -30,6 +30,7 @@ defmodule WamekuClientScratch.Mixfile do
   defp deps do
     [
       {:poison, "~> 1.5"},
+      {:porcelain, "~> 2.0"},
       {:amqp, "~> 0.1.4"}
     ]
   end

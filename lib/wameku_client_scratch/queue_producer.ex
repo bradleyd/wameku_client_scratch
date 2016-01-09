@@ -1,7 +1,11 @@
 defmodule WamekuClientScratch.QueueProducer do
-  use GenServer  
+use GenServer  
   use AMQP
   require Logger
+
+  @exchange    "test_exchange"
+  @queue       "test_queue"
+  @queue_error "#{@queue}_error"
 
   defmodule State do
     defstruct channel: :nil
@@ -23,12 +27,21 @@ defmodule WamekuClientScratch.QueueProducer do
     #queue_name = System.get_env("SENSOR_QUEUE_NAME") || "sensorqs-dev-queue"
     {:ok, conn} = AMQP.Connection.open
     {:ok, chan} = AMQP.Channel.open(conn)
-    AMQP.Queue.declare chan, "test_queue"
-    AMQP.Exchange.declare chan, "test_exchange"
-    AMQP.Queue.bind chan, "test_queue", "test_exchange"
+    Queue.declare(chan, @queue_error, durable: true)
+    # Messages that cannot be delivered to any consumer in the main queue will be routed to the error que    ue
+    Queue.declare(chan, @queue, durable: true,
+    arguments: [{"x-dead-letter-exchange", :longstr, ""},
+      {"x-dead-letter-routing-key", :longstr, @queue_error}])
+
+    #AMQP.Queue.declare(chan, "test_queue", durable: true)
+    Exchange.direct(chan, @exchange, durable: true)
+    Queue.bind(chan, @queue, @exchange)
+
+    #AMQP.Exchange.declare(chan, "test_exchange", durable: true)
+    #AMQP.Queue.bind chan, "test_queue", "test_exchange"
     {:ok, %State{channel: chan}}
   end
- 
+
   def handle_cast({:publish, message}, state) do
     Logger.info("here in publish")
     # serialize message
