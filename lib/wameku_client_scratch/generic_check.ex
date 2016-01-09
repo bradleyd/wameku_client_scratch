@@ -27,10 +27,10 @@ defmodule WamekuClientScratch.GenericCheck do
   end
 
   def handle_cast(:run_check, state) do
-    arguments  = Map.get(check, "arguments")
-    check_path = Map.get(check, "path")
-    name       = Map.get(check, "name")
-    notifier   = Map.get(check, "notifier")
+    arguments  = Map.get(state, "arguments")
+    check_path = Map.get(state, "path")
+    name       = Map.get(state, "name")
+    notifier   = Map.get(state, "notifier")
     Logger.info("Time to check #{name}")
 
     {:ok, hostname} = :inet.gethostname
@@ -52,7 +52,7 @@ defmodule WamekuClientScratch.GenericCheck do
   end
 
   def handle_info({:DOWN, ref, :process, _pid, _reason}, state) do
-    Logger.error("We went down")
+    Logger.error("We went down #{inspect(ref)}")
     {:noreply, state}
   end
   def handle_info(msg, state) do
@@ -92,7 +92,7 @@ defmodule WamekuClientScratch.GenericCheck do
 
   defp find_or_create_by_name(name) do
     case WamekuClientScratch.Cache.lookup(:cache, name) do
-      {:ok, {name, check_metadata}} ->
+      {:ok, {_name, check_metadata}} ->
         check_metadata
       :error ->
         %CheckMetadata{}
