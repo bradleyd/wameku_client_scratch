@@ -1,19 +1,32 @@
 # WamekuClientScratch
 
-**TODO: Add description**
+## This is not usable code
 
-## Installation
+This code expects there to be json config and checks to be located at `/tmp/checks`
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed as:
 
-  1. Add wameku_client_scratch to your list of dependencies in `mix.exs`:
+### Checks
 
-        def deps do
-          [{:wameku_client_scratch, "~> 0.0.1"}]
-        end
+`/tmp/checks/config/check_cpu.json` 
 
-  2. Ensure wameku_client_scratch is started before your application:
+The check configs should look like this
 
-        def application do
-          [applications: [:wameku_client_scratch]]
-        end
+```json
+{
+  "check": {
+    "name": "check-cpu",
+    "path": "/tmp/checks/check_cpu.sh",
+    "arguments": ["60"],
+    "interval": 90,
+    "notifier": ["stdout"]
+  }
+}
+```
+
+The check itself `/tmp/checks/check_cpu.sh` should behave like so.
+
+* exit either 0,1,2 code
+
+* return a message
+
+* must be executable from a shell path

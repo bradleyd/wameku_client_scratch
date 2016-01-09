@@ -9,7 +9,7 @@ defmodule WamekuClientScratch.CheckRunner do
   end
 
   defmodule CheckMetadata do
-    defstruct last_checked: :nil, exit_code: :nil, history: [], host: :nil, output: :nil, name: :nil
+    defstruct last_checked: :nil, exit_code: :nil, history: [], host: :nil, output: :nil, name: :nil, notifier: :nil
   end
 
   def start_link(opts \\ []) do
@@ -35,13 +35,15 @@ defmodule WamekuClientScratch.CheckRunner do
     arguments = Map.get(check_path, "arguments")
     check     = Map.get(check_path, "path")
     name      = Map.get(check_path, "name")
+    notifier  = Map.get(check_path, "notifier")
+
     {:ok, hostname} = :inet.gethostname
     check_results   = Porcelain.exec(check, arguments)
     Logger.info("name: #{name} -- output: #{String.rstrip(check_results.out)} -- return code: #{check_results.status}")
     ## first find the check..then increment the history of the check
     check_metadata = find_or_create_by_name(name)
     new_history    = Enum.reverse(check_metadata.history ++ [check_results.status]) |> Enum.take(20)
-    new_check_metadata = %CheckMetadata{last_checked: :os.system_time(:seconds), exit_code: check_results.status, history: new_history, output: check_results.out, name: name, host: to_string(hostname)}
+    new_check_metadata = %CheckMetadata{last_checked: :os.system_time(:seconds), exit_code: check_results.status, history: new_history, output: check_results.out, name: name, host: to_string(hostname), notifier: notifier}
     Logger.info(inspect(new_check_metadata))
     WamekuClientScratch.Cache.insert(:cache, {name, new_check_metadata})
     # push results to queue
