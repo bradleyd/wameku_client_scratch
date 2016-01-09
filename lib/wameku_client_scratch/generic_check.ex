@@ -12,16 +12,37 @@ defmodule WamekuClientScratch.GenericCheck do
 
   def start_link(check) do
     Logger.info("inside start link #{inspect(check)}")
+    #spawn_link(__MODULE__, :loop, [check])
     GenServer.start_link(__MODULE__, check)
   end
 
   def init(check) do
-    GenServer.cast(self(), {:poll})
+    #GenServer.cast(self(), {:poll})
     {:ok, check}
   end
 
   def handle_cast({:poll}, state) do
     spawn_link(__MODULE__, :loop, [state])
+    {:noreply, state}
+  end
+
+  def handle_cast(:run_check, state) do
+    arguments  = Map.get(check, "arguments")
+    check_path = Map.get(check, "path")
+    name       = Map.get(check, "name")
+    notifier   = Map.get(check, "notifier")
+    Logger.info("Time to check #{name}")
+
+    {:ok, hostname} = :inet.gethostname
+    check_results   = Porcelain.exec(check_path, arguments)
+    Logger.info("name: #{name} -- output: #{String.rstrip(check_results.out)} -- return code: #{check_results.status}")
+    ## first find the check..then increment the history of the check
+    check_metadata  = find_or_create_by_name(name)
+    new_history     = Enum.reverse(check_metadata.history ++ [check_results.status]) |> Enum.take(20)
+    new_check_metadata = %CheckMetadata{last_checked: :os.system_time(:seconds), exit_code: check_results.status, history: new_history, output: check_results.out, name: name, host: to_string(hostname), notifier: notifier}
+    WamekuClientScratch.Cache.insert(:cache, {name, new_check_metadata})
+    GenServer.cast(WamekuClientScratch.QueueProducer, {:publish, new_check_metadata})
+
     {:noreply, state}
   end
 
@@ -44,6 +65,8 @@ defmodule WamekuClientScratch.GenericCheck do
     Logger.debug("Sleeping for #{interval * 1000} milliseconds")
     :timer.sleep(interval * 1000)
     run_check(state)
+    # maybe run a handle_cast or call here
+    #GenSerever.cast(__MODULE__, :run_check) 
     loop(state)
   end
 
