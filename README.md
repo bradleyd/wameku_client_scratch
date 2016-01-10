@@ -17,11 +17,25 @@ The check configs should look like this
 ```json
 {
   "check": {
-    "name": "check-cpu",
+      "name": "check-cpu",
       "path": "/tmp/checks/check_cpu.sh",
       "arguments": ["60"],
       "interval": 90,
-      "notifier": ["stdout"]
+      "notifier": ["stdout"],
+      "rules": [
+        {
+         "ignore": {
+           "before": "timestamp",
+           "after": "timestamp"
+         }
+        }, 
+        {
+         "retry": {
+           "count": 1,
+           "delay": 3
+         }
+        }
+      ]
   }
 }
 ```

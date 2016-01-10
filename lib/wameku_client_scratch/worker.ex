@@ -2,7 +2,7 @@ defmodule WamekuClientScratch.Worker do
   require Logger
 
   defmodule CheckMetadata do
-    defstruct last_checked: :nil, exit_code: :nil, history: [], host: :nil, output: :nil, name: :nil, notifier: :nil
+    defstruct count: 0, rules: [], last_checked: :nil, exit_code: :nil, history: [], host: :nil, output: :nil, name: :nil, notifier: []
   end
 
   def start_link(check) do
@@ -22,7 +22,8 @@ defmodule WamekuClientScratch.Worker do
     arguments  = Map.get(check, "arguments")
     check_path = Map.get(check, "path")
     name       = Map.get(check, "name")
-    notifier   = Map.get(check, "notifier")
+    notifier   = Map.get(check, "notifier", [])
+    rules      = Map.get(check, "rules", [])
     Logger.info("Time to check #{name}")
 
     {:ok, hostname} = :inet.gethostname
@@ -30,8 +31,9 @@ defmodule WamekuClientScratch.Worker do
     Logger.info("name: #{name} -- output: #{String.rstrip(check_results.out)} -- return code: #{check_results.status}")
     ## first find the check..then increment the history of the check
     check_metadata  = find_or_create_by_name(name)
-    new_history     = Enum.reverse(check_metadata.history ++ [check_results.status]) |> Enum.take(20)
-    new_check_metadata = %CheckMetadata{last_checked: :os.system_time(:seconds), exit_code: check_results.status, history: new_history, output: check_results.out, name: name, host: to_string(hostname), notifier: notifier}
+    Logger.info(inspect(check_metadata))
+    new_history     = update_history(check_metadata.history, check_results.status)
+    new_check_metadata = %CheckMetadata{last_checked: :os.system_time(:seconds), exit_code: check_results.status, history: new_history, output: check_results.out, name: name, host: to_string(hostname), notifier: notifier, rules: rules, count: increment_count(check_results.status, check_metadata.count)}
     WamekuClientScratch.Cache.insert(:cache, {name, new_check_metadata})
     # push results to queue
     GenServer.cast(WamekuClientScratch.QueueProducer, {:publish, new_check_metadata})
@@ -39,11 +41,24 @@ defmodule WamekuClientScratch.Worker do
 
   defp find_or_create_by_name(name) do
     case WamekuClientScratch.Cache.lookup(:cache, name) do
-      {:ok, {name, check_metadata}} ->
+      {:ok, {_name, check_metadata}} ->
         check_metadata
       :error ->
         %CheckMetadata{}
     end
+  end
+
+  defp increment_count(status_code, count) do
+    case status_code do
+      0 -> count
+      1 -> count + 1
+      2 -> count + 1
+      _large -> count
+    end
+  end
+
+  defp update_history(old, new) do
+    Enum.reverse(old ++ [new]) |> Enum.take(20)
   end
 
 end
