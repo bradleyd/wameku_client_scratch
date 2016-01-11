@@ -2,7 +2,7 @@ defmodule WamekuClientScratch.Worker do
   require Logger
 
   defmodule CheckMetadata do
-    defstruct count: 0, rules: [], last_checked: :nil, exit_code: :nil, history: [], host: :nil, output: :nil, name: :nil, notifier: []
+    defstruct count: 0, actions: [], last_checked: :nil, exit_code: :nil, history: [], host: :nil, output: :nil, name: :nil, notifier: []
   end
 
   def start_link(check) do
@@ -23,7 +23,7 @@ defmodule WamekuClientScratch.Worker do
     check_path = Map.get(check, "path")
     name       = Map.get(check, "name")
     notifier   = Map.get(check, "notifier", [])
-    rules      = Map.get(check, "rules", [])
+    actions    = Map.get(check, "actions", [])
     Logger.info("Time to check #{name}")
 
     {:ok, hostname} = :inet.gethostname
@@ -31,12 +31,29 @@ defmodule WamekuClientScratch.Worker do
     Logger.info("name: #{name} -- output: #{String.rstrip(check_results.out)} -- return code: #{check_results.status}")
     ## first find the check..then increment the history of the check
     check_metadata  = find_or_create_by_name(name)
-    Logger.info(inspect(check_metadata))
     new_history     = update_history(check_metadata.history, check_results.status)
-    new_check_metadata = %CheckMetadata{last_checked: :os.system_time(:seconds), exit_code: check_results.status, history: new_history, output: check_results.out, name: name, host: to_string(hostname), notifier: notifier, rules: rules, count: increment_count(check_results.status, check_metadata.count)}
+    new_check_metadata = %CheckMetadata{last_checked: :os.system_time(:seconds), exit_code: check_results.status, history: new_history, output: check_results.out, name: name, host: to_string(hostname), notifier: notifier, actions: actions, count: increment_count(check_results.status, check_metadata.count)}
     WamekuClientScratch.Cache.insert(:cache, {name, new_check_metadata})
+    take_action(actions, new_check_metadata)
     # push results to queue
     GenServer.cast(WamekuClientScratch.QueueProducer, {:publish, new_check_metadata})
+  end
+
+  # This is awful but the idea what counts
+  defp take_action([], check_status), do: false
+  defp take_action([h|t], check_status) do
+    name = Map.get(h, "name")
+    qualifier = Map.get(h, "qualifier")
+    command = Map.get(h, "command")
+    check_variable = hd(qualifier)
+    check_condition = List.last(qualifier)
+
+    # find key and value in check_status
+    actual_variable = Map.get(check_status, String.to_atom(check_variable))
+    Logger.info(inspect(actual_variable))
+    if actual_variable >= check_condition do
+      Porcelain.exec(command, [])
+    end
   end
 
   defp find_or_create_by_name(name) do
@@ -50,7 +67,7 @@ defmodule WamekuClientScratch.Worker do
 
   defp increment_count(status_code, count) do
     case status_code do
-      0 -> count
+      0 -> 0
       1 -> count + 1
       2 -> count + 1
       _large -> count

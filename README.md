@@ -22,23 +22,27 @@ The check configs should look like this
       "arguments": ["60"],
       "interval": 90,
       "notifier": ["stdout"],
-      "rules": [
-        {
-         "ignore": {
-           "before": "timestamp",
-           "after": "timestamp"
-         }
-        }, 
-        {
-         "retry": {
-           "count": 1,
-           "delay": 3
-         }
-        }
-      ]
+      "actions": [{ 
+        "name": "disk_full",
+        "qualifier": ["count", ">", 5],
+        "command": "/tmp/foobar.sh"
+      }]  
   }
 }
 ```
+
+* name - name of check
+
+* path - location of check to run
+
+* arguments - list of arguments to pass to check
+
+* interval - how frequent to run the check
+
+* notifier - The alerting type living on the server if check fails
+
+* actions - Take an `action` if a qualifier is met
+
 
 The check itself `/tmp/checks/check_cpu.sh` should behave like so.
 
