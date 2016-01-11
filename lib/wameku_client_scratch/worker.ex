@@ -51,7 +51,9 @@ defmodule WamekuClientScratch.Worker do
     # find key and value in check_status
     actual_variable = Map.get(check_status, String.to_atom(check_variable))
     Logger.info(inspect(actual_variable))
-    if actual_variable >= check_condition do
+    # We must have a non-zero exit_code to run
+     
+    if actual_variable >= check_condition && check_status.exit_code != 0 do
       Porcelain.exec(command, [])
     end
   end
