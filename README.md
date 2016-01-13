@@ -24,7 +24,9 @@ The check configs should look like this
       "notifier": ["stdout"],
       "actions": [{ 
         "name": "disk_full",
-        "qualifier": ["count", ">", 5],
+        "qualifier": "count",
+        "condition": "greater_than",
+        "value": 5,
         "command": "/tmp/foobar.sh"
       }]  
   }
@@ -41,7 +43,7 @@ The check configs should look like this
 
 * notifier - The alerting type living on the server if check fails
 
-* actions - Take an `action` if a qualifier is met
+* actions - Take an `action` if a qualifier's condition is met
 
 
 The check itself `/tmp/checks/check_cpu.sh` should behave like so.

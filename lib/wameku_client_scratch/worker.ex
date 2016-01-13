@@ -30,8 +30,8 @@ defmodule WamekuClientScratch.Worker do
     check_results   = Porcelain.exec(check_path, arguments)
     Logger.info("name: #{name} -- output: #{String.rstrip(check_results.out)} -- return code: #{check_results.status}")
     ## first find the check..then increment the history of the check
-    check_metadata  = find_or_create_by_name(name)
-    new_history     = update_history(check_metadata.history, check_results.status)
+    check_metadata     = find_or_create_by_name(name)
+    new_history        = update_history(check_metadata.history, check_results.status)
     new_check_metadata = %CheckMetadata{last_checked: :os.system_time(:seconds), exit_code: check_results.status, history: new_history, output: check_results.out, name: name, host: to_string(hostname), notifier: notifier, actions: actions, count: increment_count(check_results.status, check_metadata.count)}
     WamekuClientScratch.Cache.insert(:cache, {name, new_check_metadata})
     take_action(actions, new_check_metadata)
@@ -40,22 +40,10 @@ defmodule WamekuClientScratch.Worker do
   end
 
   # This is awful but the idea what counts
-  defp take_action([], check_status), do: false
+  defp take_action([], check_status), do: :ok
   defp take_action([h|t], check_status) do
-    name = Map.get(h, "name")
-    qualifier = Map.get(h, "qualifier")
-    command = Map.get(h, "command")
-    check_variable = hd(qualifier)
-    check_condition = List.last(qualifier)
-
-    # find key and value in check_status
-    actual_variable = Map.get(check_status, String.to_atom(check_variable))
-    Logger.info(inspect(actual_variable))
-    # We must have a non-zero exit_code to run
-     
-    if actual_variable >= check_condition && check_status.exit_code != 0 do
-      Porcelain.exec(command, [])
-    end
+    WamekuClientScratch.ParseActions.apply_action(h, check_status)
+    take_action(t, check_status)
   end
 
   defp find_or_create_by_name(name) do
