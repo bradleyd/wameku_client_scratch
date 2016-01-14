@@ -24,9 +24,8 @@ defmodule WamekuClientScratch.Scheduler do
     Path.wildcard("/tmp/checks/config/*.json")
     |> Enum.into([], fn(x) -> Poison.decode!(File.read!(x)) end)
     |> Enum.each(fn(check) ->
-      Logger.debug("Got check #{inspect(check)}")
-      temp = Map.get(check, "check")
-      name = Map.get(temp, "name")
+      #temp = Map.get(check, "check")
+      #name = Map.get(temp, "name")
       WamekuClientScratch.GenericChecksSupervisor.start_child(Map.get(check, "check"))
     end)
   end

@@ -24,15 +24,16 @@ defmodule WamekuClientScratch.Worker do
     name       = Map.get(check, "name")
     notifier   = Map.get(check, "notifier", [])
     actions    = Map.get(check, "actions", [])
+
     Logger.info("Time to check #{name}")
 
     {:ok, hostname} = :inet.gethostname
-    check_results   = Porcelain.exec(check_path, arguments)
-    Logger.info("name: #{name} -- output: #{String.rstrip(check_results.out)} -- return code: #{check_results.status}")
+    check_results   = WamekuClientScratch.Shell.run(check_path, arguments)
+    Logger.info("name: #{name} -- output: #{String.rstrip(check_results.output)} -- return code: #{check_results.exit_code}")
     ## first find the check..then increment the history of the check
     check_metadata     = find_or_create_by_name(name)
-    new_history        = update_history(check_metadata.history, check_results.status)
-    new_check_metadata = %CheckMetadata{last_checked: :os.system_time(:seconds), exit_code: check_results.status, history: new_history, output: check_results.out, name: name, host: to_string(hostname), notifier: notifier, actions: actions, count: increment_count(check_results.status, check_metadata.count)}
+    new_history        = update_history(check_metadata.history, check_results.exit_code)
+    new_check_metadata = %CheckMetadata{last_checked: :os.system_time(:seconds), exit_code: check_results.exit_code, history: new_history, output: check_results.output, name: name, host: to_string(hostname), notifier: notifier, actions: actions, count: increment_count(check_results.exit_code, check_metadata.count)}
     WamekuClientScratch.Cache.insert(:cache, {name, new_check_metadata})
     take_action(actions, new_check_metadata)
     # push results to queue
@@ -40,7 +41,7 @@ defmodule WamekuClientScratch.Worker do
   end
 
   # This is awful but the idea what counts
-  defp take_action([], check_status), do: :ok
+  defp take_action([], _check_status), do: :ok
   defp take_action([h|t], check_status) do
     WamekuClientScratch.ParseActions.apply_action(h, check_status)
     take_action(t, check_status)
