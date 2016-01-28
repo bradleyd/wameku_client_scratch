@@ -8,6 +8,7 @@ defmodule WamekuClientScratch do
       worker(WamekuClientScratch.Cache, [:cache]),
       worker(WamekuClientScratch.QueueProducer, []),
       supervisor(WamekuClientScratch.GenericChecksSupervisor, []),
+      worker(WamekuClientScratch.WebApiServer, []),
       worker(WamekuClientScratch.Scheduler, [])
     ]
 

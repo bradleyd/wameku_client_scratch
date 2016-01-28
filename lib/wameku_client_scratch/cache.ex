@@ -6,7 +6,7 @@ defmodule WamekuClientScratch.Cache do
   end
 
   def init(table) do
-    ets  = :ets.new(table, [:set, :public, :named_table, read_concurrency: true])
+    ets = :ets.new(table, [:set, :public, :named_table, read_concurrency: true])
     {:ok, %{names: ets}}
   end
 
