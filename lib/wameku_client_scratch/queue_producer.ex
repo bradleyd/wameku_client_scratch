@@ -3,12 +3,12 @@ use GenServer
   use AMQP
   require Logger
 
-  @exchange    "test_exchange"
-  @queue       "test_queue"
+  @exchange    "clients_exchange"
+  @queue       "clients"
   @queue_error "#{@queue}_error"
 
   defmodule State do
-    defstruct channel: :nil
+    defstruct channel: :nil, connection: :nil
   end
 
   defmodule CheckMetadata do
@@ -34,13 +34,13 @@ use GenServer
 
     #AMQP.Exchange.declare(chan, "test_exchange", durable: true)
     #AMQP.Queue.bind chan, "test_queue", "test_exchange"
-    {:ok, %State{channel: chan}}
+    {:ok, %State{channel: chan, connection: conn}}
   end
 
   def handle_cast({:publish, message}, state) do
     # serialize message
     serialized_message = Poison.encode!(message)
-    case AMQP.Basic.publish(state.channel, "test_exchange", "", serialized_message) do
+    case AMQP.Basic.publish(state.channel, @exchange, "", serialized_message) do
       :ok ->
         Logger.info("Published message #{inspect(message)} to queue")
       error ->
