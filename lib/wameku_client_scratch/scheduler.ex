@@ -1,6 +1,8 @@
 defmodule WamekuClientScratch.Scheduler do
-  use GenServer  
+  use GenServer
   require Logger
+
+  @home_directory Application.get_env(:wameku_client_scratch, :home_directory)
 
   defmodule State do
     defstruct config: :nil, queue_name: :nil
@@ -21,7 +23,8 @@ defmodule WamekuClientScratch.Scheduler do
   end
 
   def loop(state) do
-    Path.wildcard("/tmp/checks/config/*.json")
+    checks_path = Path.join([@home_directory, "checks", "*.json"])
+    Path.wildcard(checks_path)
     |> Enum.into([], fn(x) -> Poison.decode!(File.read!(x)) end)
     |> Enum.each(fn(check) ->
       WamekuClientScratch.GenericChecksSupervisor.start_child(Map.get(check, "check"))
