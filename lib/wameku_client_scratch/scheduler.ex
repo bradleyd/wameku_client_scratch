@@ -23,7 +23,7 @@ defmodule WamekuClientScratch.Scheduler do
   end
 
   def loop(state) do
-    checks_path = Path.join([@home_directory, "checks", "*.json"])
+    checks_path = Path.join([@home_directory, "client", "config", "*.json"])
     Path.wildcard(checks_path)
     |> Enum.into([], fn(x) -> Poison.decode!(File.read!(x)) end)
     |> Enum.each(fn(check) ->
